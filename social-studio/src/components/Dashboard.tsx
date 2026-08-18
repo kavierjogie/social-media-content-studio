@@ -3,7 +3,7 @@ import Card from './ui/Card'
 import Button from './ui/Button'
 import PlatformIcon from './PlatformIcon'
 import PipelineSignature from './PipelineSignature'
-import { PLATFORMS } from '../data/platforms'
+import DashboardCharts from './DashboardCharts'
 import { ContentItem, View } from '../types'
 
 export default function Dashboard({
@@ -14,7 +14,6 @@ export default function Dashboard({
   setView: (v: View) => void
 }) {
   const recent = items.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 3)
-  const totalPieces = items.reduce((sum, i) => sum + i.pieces.length, 0)
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -41,23 +40,8 @@ export default function Dashboard({
         </Button>
       </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className="text-center">
-          <p className="font-display text-2xl font-semibold text-mist-50">{items.length}</p>
-          <p className="mt-1 text-xs text-mist-400">Ideas created</p>
-        </Card>
-        <Card className="text-center">
-          <p className="font-display text-2xl font-semibold text-mist-50">{totalPieces}</p>
-          <p className="mt-1 text-xs text-mist-400">Pieces generated</p>
-        </Card>
-        <Card className="text-center">
-          <p className="font-display text-2xl font-semibold text-mist-50">{PLATFORMS.length}</p>
-          <p className="mt-1 text-xs text-mist-400">Formats supported</p>
-        </Card>
-        <Card className="text-center">
-          <p className="font-display text-2xl font-semibold text-mist-50">{items.filter((i) => i.scheduledFor).length}</p>
-          <p className="mt-1 text-xs text-mist-400">Scheduled</p>
-        </Card>
+      <div className="mt-10">
+        <DashboardCharts items={items} />
       </div>
 
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
