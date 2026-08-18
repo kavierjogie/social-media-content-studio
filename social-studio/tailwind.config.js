@@ -58,6 +58,7 @@ export default {
       },
       animation: {
         flow: 'flow 3s linear infinite',
+        'flow-fast': 'flow 1s linear infinite',
         pulseDot: 'pulseDot 2.2s ease-in-out infinite',
         rise: 'rise 0.35s ease-out both'
       }

@@ -10,6 +10,7 @@ import { transformContent } from '../lib/generator'
 import { uid } from '../lib/storage'
 import RefinePiece from './RefinePiece'
 import EditablePostCard from './EditablePostCard'
+import PipelineSignature from './PipelineSignature'
 
 
 const TONES = [
@@ -360,7 +361,14 @@ export default function CreateContent({
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-grad-social text-[11px] text-white">2</span>
             Which platforms?
           </label>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="my-4">
+            <PipelineSignature
+              selectedPlatforms={selected}
+              onTogglePlatform={togglePlatform}
+              isGenerating={generating}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
             {PLATFORMS.map((p) => {
               const active = selected.includes(p.id)
               return (
