@@ -16,7 +16,7 @@ export default function App() {
   const [view, setView] = useState<View>('dashboard')
   const [items, setItems] = useState<ContentItem[]>(() => loadContent())
   const [activeTransformItem, setActiveTransformItem] = useState<ContentItem | null>(null)
-  const [prefillTopic, setPrefillTopic] = useState<string | undefined>(undefined)
+  const [prefillPrompt, setPrefillPrompt] = useState<PromptTemplate | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function App() {
   }
 
   const usePrompt = (prompt: PromptTemplate) => {
-    setPrefillTopic(prompt.template.replace('{topic}', '').replace(/\s+/g, ' ').trim())
+    setPrefillPrompt(prompt)
     setView('create')
   }
 
@@ -70,7 +70,12 @@ export default function App() {
         <main className="flex-1 px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
           {view === 'dashboard' && <Dashboard items={items} setView={setView} />}
           {view === 'create' && (
-            <CreateContent onSave={handleSave} prefillTopic={prefillTopic} goToTransform={goToTransform} />
+            <CreateContent
+              onSave={handleSave}
+              prefillPrompt={prefillPrompt || undefined}
+              onClearPrompt={() => setPrefillPrompt(null)}
+              goToTransform={goToTransform}
+            />
           )}
           {view === 'transform' && (
             <TransformContent items={items} activeItem={activeTransformItem} onUpdate={handleUpdate} />

@@ -45,6 +45,12 @@ export const PLATFORMS: PlatformMeta[] = [
     label: 'Hashtag set',
     accent: 'orange',
     description: 'A ready-to-paste set of reach and niche hashtags.'
+  },
+  {
+    id: 'calendar',
+    label: 'Content calendar',
+    accent: 'orange',
+    description: 'A structured weekly content plan with topics and formats.'
   }
 ]
 

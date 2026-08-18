@@ -19,6 +19,10 @@ export default function TransformContent({
   const [selectedId, setSelectedId] = useState<string>(activeItem?.id ?? items[0]?.id ?? '')
   const [targets, setTargets] = useState<Platform[]>([])
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  
+  // Loading & Error states
+  const [transforming, setTransforming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (activeItem) setSelectedId(activeItem.id)
@@ -29,15 +33,27 @@ export default function TransformContent({
   const available = PLATFORMS.filter((p) => !existingPlatforms.has(p.id))
 
   const toggle = (p: Platform) => {
+    if (transforming) return
     setTargets((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]))
   }
 
-  const handleTransform = () => {
-    if (!current || targets.length === 0) return
-    const newPieces = transformContent(current.topic, targets, current.tone)
-    const updated: ContentItem = { ...current, pieces: [...current.pieces, ...newPieces] }
-    onUpdate(updated)
-    setTargets([])
+  const handleTransform = async () => {
+    if (!current || targets.length === 0 || transforming) return
+    setTransforming(true)
+    setError(null)
+
+    try {
+      // Perform context-aware transformation by passing current.pieces
+      const newPieces = await transformContent(current.topic, targets, current.tone, current.pieces)
+      const updated: ContentItem = { ...current, pieces: [...current.pieces, ...newPieces] }
+      onUpdate(updated)
+      setTargets([])
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || 'An error occurred during content transformation.')
+    } finally {
+      setTransforming(false)
+    }
   }
 
   const copy = async (key: string, text: string) => {
@@ -80,7 +96,8 @@ export default function TransformContent({
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-mist-50 focus:border-signal-pink/50"
+            disabled={transforming}
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-mist-50 focus:border-signal-pink/50 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {items.map((i) => (
               <option key={i.id} value={i.id} className="bg-ink-900">
@@ -96,7 +113,7 @@ export default function TransformContent({
               {current.pieces.map((p) => (
                 <span key={p.platform} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-mist-400">
                   <PlatformIcon platform={p.platform} size={12} />
-                  {PLATFORMS.find((pl) => pl.id === p.platform)?.label}
+                  {PLATFORMS.find((pl) => pl.id === p.platform)?.label || p.platform}
                 </span>
               ))}
             </div>
@@ -111,7 +128,8 @@ export default function TransformContent({
                       <button
                         key={p.id}
                         onClick={() => toggle(p.id)}
-                        className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition-colors ${
+                        disabled={transforming}
+                        className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                           active
                             ? 'border-signal-orange/40 bg-signal-orange/15 text-orange-200'
                             : 'border-white/10 bg-white/[0.03] text-mist-400 hover:text-mist-100'
@@ -123,9 +141,9 @@ export default function TransformContent({
                     )
                   })}
                 </div>
-                <Button intent="action" className="mt-4" onClick={handleTransform} disabled={targets.length === 0}>
+                <Button intent="action" className="mt-4" onClick={handleTransform} disabled={targets.length === 0 || transforming}>
                   <Repeat size={14} />
-                  Transform
+                  {transforming ? 'Transforming...' : 'Transform'}
                 </Button>
               </div>
             ) : (
@@ -134,6 +152,33 @@ export default function TransformContent({
           </>
         )}
       </Card>
+
+      {/* Loading Overlay */}
+      {transforming && (
+        <div className="mt-6 flex flex-col items-center justify-center p-12 card-surface rounded-2xl animate-rise relative overflow-hidden">
+          <div className="absolute inset-0 bg-grad-panel opacity-50 blur-xl"></div>
+          <div className="relative flex flex-col items-center z-10">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-signal-pink/30 border-t-signal-pink"></div>
+            <p className="mt-4 font-display text-base font-semibold text-mist-50 animate-pulse">Transforming your content...</p>
+            <p className="mt-1 text-xs text-mist-400">Gemini is rewriting the topic for new platforms</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mt-6 border border-red-500/30 bg-red-500/10 rounded-2xl p-5 text-sm animate-rise flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <h4 className="font-semibold text-red-300 flex items-center gap-1.5">
+              ❌ Content Transformation Failed
+            </h4>
+            <button onClick={() => setError(null)} className="text-mist-400 hover:text-mist-100" aria-label="Dismiss error">
+              ✕
+            </button>
+          </div>
+          <p className="text-xs text-red-200 leading-relaxed font-mono whitespace-pre-wrap">{error}</p>
+        </div>
+      )}
 
       {current && (
         <div className="mt-8 space-y-4">

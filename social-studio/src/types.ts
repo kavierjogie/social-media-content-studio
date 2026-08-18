@@ -6,6 +6,7 @@ export type Platform =
   | 'blog'
   | 'hashtags'
   | 'promo'
+  | 'calendar'
 
 export type PromptCategory =
   | 'Social Media'
