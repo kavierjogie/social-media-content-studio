@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { CalendarDays } from 'lucide-react'
 import Card from './ui/Card'
 import Button from './ui/Button'
@@ -14,6 +14,9 @@ export default function ContentCalendar({
 }) {
   const [pendingId, setPendingId] = useState<string>('')
   const [pendingDate, setPendingDate] = useState<string>('')
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const grouped = useMemo(() => {
     const map = new Map<string, ContentItem[]>()
@@ -28,11 +31,40 @@ export default function ContentCalendar({
 
   const unscheduled = items.filter((i) => !i.scheduledFor)
 
+  const filtered = useMemo(() => {
+    const selectedItem = unscheduled.find((i) => i.id === pendingId)
+    if (selectedItem && searchQuery === selectedItem.topic) {
+      return unscheduled
+    }
+    return unscheduled.filter((item) =>
+      item.topic.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [unscheduled, searchQuery, pendingId])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+        const selectedItem = items.find((i) => i.id === pendingId)
+        if (selectedItem) {
+          setSearchQuery(selectedItem.topic)
+        } else {
+          setSearchQuery('')
+        }
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [pendingId, items])
+
   const handleAdd = () => {
     if (!pendingId || !pendingDate) return
     onSchedule(pendingId, pendingDate)
     setPendingId('')
     setPendingDate('')
+    setSearchQuery('')
   }
 
   return (
@@ -52,16 +84,48 @@ export default function ContentCalendar({
           <Card className="mb-8">
             <p className="mb-3 text-sm font-semibold text-mist-100">Schedule a piece</p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <select
-                value={pendingId}
-                onChange={(e) => setPendingId(e.target.value)}
-                className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-mist-50 focus:border-signal-orange/50"
-              >
-                <option value="" className="bg-ink-900">Choose content…</option>
-                {unscheduled.map((i) => (
-                  <option key={i.id} value={i.id} className="bg-ink-900">{i.topic}</option>
-                ))}
-              </select>
+              <div ref={containerRef} className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Choose content…"
+                  value={searchQuery}
+                  onFocus={() => setIsOpen(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setPendingId('')
+                    setIsOpen(true)
+                  }}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-mist-50 placeholder-mist-400 focus:border-signal-orange/50 focus:outline-none"
+                />
+                {isOpen && (
+                  <div className="absolute left-0 right-0 z-50 mt-2 max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-ink-900 p-1.5 shadow-2xl backdrop-blur-md">
+                    {filtered.length === 0 ? (
+                      <div className="px-4 py-2.5 text-sm text-mist-400">
+                        No matching content found
+                      </div>
+                    ) : (
+                      filtered.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setPendingId(item.id)
+                            setSearchQuery(item.topic)
+                            setIsOpen(false)
+                          }}
+                          className={`w-full text-left rounded-lg px-4 py-2 text-sm transition-colors hover:bg-white/5 ${
+                            pendingId === item.id
+                              ? 'bg-white/10 text-mist-50 font-medium'
+                              : 'text-mist-300 hover:text-mist-50'
+                          }`}
+                        >
+                          {item.topic}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
               <input
                 type="date"
                 value={pendingDate}
