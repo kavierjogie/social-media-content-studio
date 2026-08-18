@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Repeat, Copy, Check } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { Repeat, Copy, Check, ChevronDown, Search } from 'lucide-react'
 import Card from './ui/Card'
 import Button from './ui/Button'
 import PlatformIcon from './PlatformIcon'
@@ -23,9 +23,36 @@ export default function TransformContent({
   const [targets, setTargets] = useState<Platform[]>([])
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   
+  // Custom dropdown states
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
   // Loading & Error states
   const [transforming, setTransforming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!dropdownOpen) {
+      setSearchQuery('')
+    }
+  }, [dropdownOpen])
+
+  const filteredItems = items.filter((item) =>
+    item.topic.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   useEffect(() => {
     if (activeItem) setSelectedId(activeItem.id)
@@ -96,18 +123,66 @@ export default function TransformContent({
       <Card className="space-y-6">
         <div>
           <label className="mb-2 block text-sm font-semibold text-mist-100">Source content</label>
-          <select
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            disabled={transforming}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-mist-50 focus:border-signal-pink/50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {items.map((i) => (
-              <option key={i.id} value={i.id} className="bg-ink-900">
-                {i.topic}
-              </option>
-            ))}
-          </select>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              disabled={transforming}
+              className="flex items-center justify-between w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-mist-50 focus:outline-none focus:border-signal-pink/50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span className="truncate">{current?.topic ?? 'Select source content'}</span>
+              <ChevronDown className={`ml-2 h-4 w-4 shrink-0 transition-transform text-mist-400 ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute z-50 w-full mt-2 bg-ink-950 border border-white/10 rounded-xl shadow-2xl backdrop-blur-md overflow-hidden animate-rise">
+                <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5">
+                  <Search className="h-4 w-4 text-mist-400 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search content..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent text-sm text-mist-50 outline-none placeholder:text-mist-500"
+                  />
+                </div>
+                <div className="max-h-60 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
+                  {filteredItems.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-mist-400 text-center">
+                      No matching content found
+                    </div>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedId(item.id)
+                          setDropdownOpen(false)
+                        }}
+                        className={`flex items-center justify-between w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.05] ${
+                          item.id === selectedId ? 'bg-white/[0.05] text-mist-50 font-medium' : 'text-mist-200'
+                        }`}
+                      >
+                        <span className="truncate mr-4" title={item.topic}>{item.topic}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {item.pieces.map((piece) => (
+                            <span
+                              key={piece.platform}
+                              className="flex items-center justify-center w-5 h-5 rounded-full border border-white/10 bg-white/[0.05]"
+                              title={PLATFORMS.find((pl) => pl.id === piece.platform)?.label || piece.platform}
+                            >
+                              <PlatformIcon platform={piece.platform} size={10} />
+                            </span>
+                          ))}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {current && (
