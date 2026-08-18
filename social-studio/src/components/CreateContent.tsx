@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Sparkles, Copy, Check, ChevronDown, Repeat, BookOpen, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Sparkles, Copy, Check, ChevronDown, Repeat, BookOpen, AlertTriangle, ExternalLink, Plus } from 'lucide-react'
 import Card from './ui/Card'
 import Button from './ui/Button'
 import PlatformIcon from './PlatformIcon'
@@ -44,10 +44,17 @@ export default function CreateContent({
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  const [addingPlatform, setAddingPlatform] = useState<Platform | null>(null)
+  const [addDropdownOpen, setAddDropdownOpen] = useState(false)
+  const addDropdownRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false)
+      }
+      if (addDropdownRef.current && !addDropdownRef.current.contains(event.target as Node)) {
+        setAddDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -113,6 +120,35 @@ export default function CreateContent({
       setError(err.message || 'An error occurred during content generation.')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const existingPlatforms = new Set(result?.pieces.map((p) => p.platform) ?? [])
+  const availablePlatforms = PLATFORMS.filter((p) => !existingPlatforms.has(p.id))
+
+  const handleAddPlatform = async (p: Platform) => {
+    if (!result || addingPlatform) return
+    setAddDropdownOpen(false)
+    setAddingPlatform(p)
+    setActiveTab(p)
+    setError(null)
+
+    try {
+      const newPieces = await transformContent(result.topic, [p], result.tone, result.pieces)
+      if (newPieces.length > 0) {
+        const updatedItem = {
+          ...result,
+          pieces: [...result.pieces, ...newPieces]
+        }
+        setResult(updatedItem)
+        if (onUpdate) onUpdate(updatedItem)
+      }
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || 'An error occurred during platform addition.')
+      setActiveTab(result.pieces[0]?.platform ?? null)
+    } finally {
+      setAddingPlatform(null)
     }
   }
 
@@ -434,54 +470,97 @@ export default function CreateContent({
           </div>
 
           {/* Mobile dropdown selector */}
-          <div className="relative sm:hidden mb-6" ref={dropdownRef}>
-            <button
-              type="button"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className={`w-full flex items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all shadow-sm ${
-                activeTab ? `platform-active-${activeTab}` : 'border-white/10 bg-white/[0.03] text-mist-400'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {activeTab && <PlatformIcon platform={activeTab} size={15} />}
-                <span className="font-semibold">
-                  {activeTab ? (PLATFORMS.find((p) => p.id === activeTab)?.label || activeTab) : 'Select Platform'}
-                </span>
-              </div>
-              <ChevronDown size={16} className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+          <div className="flex gap-2 sm:hidden mb-6 w-full">
+            <div className="relative flex-1" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className={`w-full flex items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all shadow-sm ${
+                  activeTab ? `platform-active-${activeTab}` : 'border-white/10 bg-white/[0.03] text-mist-400'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {activeTab && <PlatformIcon platform={activeTab} size={15} />}
+                  <span className="font-semibold">
+                    {activeTab ? (PLATFORMS.find((p) => p.id === activeTab)?.label || activeTab) : 'Select Platform'}
+                    {addingPlatform && activeTab === addingPlatform && ' (Generating...)'}
+                  </span>
+                </div>
+                {addingPlatform && activeTab === addingPlatform ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                ) : (
+                  <ChevronDown size={16} className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                )}
+              </button>
 
-            {dropdownOpen && (
-              <div className="absolute left-0 right-0 z-30 mt-2 rounded-xl border border-white/10 bg-ink-950 p-1.5 shadow-xl animate-rise">
-                {result.pieces.map((piece) => {
-                  const isSelected = activeTab === piece.platform;
-                  return (
-                    <button
-                      key={piece.platform}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(piece.platform)
-                        setDropdownOpen(false)
-                      }}
-                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
-                        isSelected
-                          ? `platform-active-${piece.platform}`
-                          : 'text-mist-400 hover:text-mist-100 hover:bg-white/5'
-                      }`}
-                    >
-                      <PlatformIcon platform={piece.platform} size={14} />
-                      <span>
-                        {PLATFORMS.find((p) => p.id === piece.platform)?.label || piece.platform}
+              {dropdownOpen && (
+                <div className="absolute left-0 right-0 z-30 mt-2 rounded-xl border border-white/10 bg-ink-950 p-1.5 shadow-xl animate-rise">
+                  {result.pieces.map((piece) => {
+                    const isSelected = activeTab === piece.platform;
+                    return (
+                      <button
+                        key={piece.platform}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(piece.platform)
+                          setDropdownOpen(false)
+                        }}
+                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
+                          isSelected
+                            ? `platform-active-${piece.platform}`
+                            : 'text-mist-400 hover:text-mist-100 hover:bg-white/5'
+                        }`}
+                      >
+                        <PlatformIcon platform={piece.platform} size={14} />
+                        <span>
+                          {PLATFORMS.find((p) => p.id === piece.platform)?.label || piece.platform}
+                        </span>
+                      </button>
+                    )
+                  })}
+                  {addingPlatform && (
+                    <div className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium text-mist-500/50 bg-white/[0.01]">
+                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-mist-500/20 border-t-mist-500 mr-2"></div>
+                      <PlatformIcon platform={addingPlatform} size={14} />
+                      <span className="ml-1">
+                        Generating {PLATFORMS.find((p) => p.id === addingPlatform)?.label || addingPlatform}...
                       </span>
-                    </button>
-                  )
-                })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {availablePlatforms.length > 0 && !addingPlatform && (
+              <div className="relative" ref={addDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setAddDropdownOpen(!addDropdownOpen)}
+                  className="h-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 hover:border-white/40 px-4 text-sm font-semibold text-mist-400 hover:text-mist-200 transition-colors"
+                >
+                  <Plus size={16} />
+                  <span>Add</span>
+                </button>
+                {addDropdownOpen && (
+                  <div className="absolute right-0 mt-2 z-30 w-56 rounded-xl border border-white/10 bg-ink-950 p-1.5 shadow-xl animate-rise">
+                    {availablePlatforms.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleAddPlatform(p.id)}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-mist-400 hover:text-mist-100 hover:bg-white/5 transition-colors"
+                      >
+                        <PlatformIcon platform={p.id} size={14} />
+                        <span>{p.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Desktop tabs selector */}
-          <div className="hidden sm:flex flex-wrap gap-2 border-b border-white/8 pb-3">
+          <div className="hidden sm:flex flex-wrap gap-2 border-b border-white/8 pb-3 items-center">
             {result.pieces.map((piece) => (
               <button
                 key={piece.platform}
@@ -496,6 +575,41 @@ export default function CreateContent({
                 {PLATFORMS.find((p) => p.id === piece.platform)?.label || piece.platform}
               </button>
             ))}
+
+            {addingPlatform && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.01] px-3 py-1.5 text-xs font-medium text-mist-400/70 animate-pulse">
+                <div className="h-3 w-3 animate-spin rounded-full border border-mist-400/30 border-t-mist-400"></div>
+                <PlatformIcon platform={addingPlatform} size={13} />
+                <span>Generating {PLATFORMS.find((p) => p.id === addingPlatform)?.label || addingPlatform}...</span>
+              </div>
+            )}
+
+            {availablePlatforms.length > 0 && !addingPlatform && (
+              <div className="relative" ref={addDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setAddDropdownOpen(!addDropdownOpen)}
+                  className="flex items-center gap-1 border border-dashed border-white/20 hover:border-white/40 rounded-lg px-3 py-1.5 text-xs font-medium text-mist-400 hover:text-mist-200 transition-colors"
+                >
+                  <Plus size={12} />
+                  <span>Add Platform</span>
+                </button>
+                {addDropdownOpen && (
+                  <div className="absolute left-0 mt-2 z-30 w-56 rounded-xl border border-white/10 bg-ink-950 p-1.5 shadow-xl animate-rise">
+                    {availablePlatforms.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleAddPlatform(p.id)}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-mist-400 hover:text-mist-100 hover:bg-white/5 transition-colors"
+                      >
+                        <PlatformIcon platform={p.id} size={14} />
+                        <span>{p.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {result.pieces
@@ -519,6 +633,19 @@ export default function CreateContent({
                 }}
               />
             ))}
+
+          {addingPlatform && activeTab === addingPlatform && (
+            <div className="mt-4 flex flex-col items-center justify-center p-12 card-surface rounded-2xl animate-rise relative overflow-hidden">
+              <div className="absolute inset-0 bg-grad-panel opacity-50 blur-xl animate-pulse"></div>
+              <div className="relative flex flex-col items-center z-10">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-signal-purple/30 border-t-signal-purple"></div>
+                <p className="mt-4 font-display text-sm font-semibold text-mist-50 animate-pulse">
+                  Drafting {PLATFORMS.find((p) => p.id === addingPlatform)?.label || addingPlatform} version...
+                </p>
+                <p className="mt-1 text-xs text-mist-400">Gemini is rewriting the topic for this platform</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
