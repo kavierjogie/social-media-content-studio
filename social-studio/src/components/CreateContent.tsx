@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Sparkles, Copy, Check, ChevronDown, Repeat, BookOpen, AlertTriangle } from 'lucide-react'
+import { Sparkles, Copy, Check, ChevronDown, Repeat, BookOpen, AlertTriangle, ExternalLink } from 'lucide-react'
 import Card from './ui/Card'
 import Button from './ui/Button'
 import PlatformIcon from './PlatformIcon'
@@ -164,9 +164,19 @@ export default function CreateContent({
 
         {showKeySettings && (
           <div className="mt-2 p-4 rounded-xl border border-white/10 bg-white/[0.02] animate-rise space-y-3">
-            <p className="text-xs text-mist-300 leading-relaxed">
-              Define <code className="font-mono text-white bg-white/5 px-1 py-0.5 rounded">VITE_GEMINI_API_KEY</code> in your environment variable / <code className="font-mono text-white bg-white/5 px-1 py-0.5 rounded">.env</code> file, or set browser key below:
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-xs text-mist-300 leading-relaxed">
+                Define <code className="font-mono text-white bg-white/5 px-1 py-0.5 rounded">VITE_GEMINI_API_KEY</code> in your environment variable / <code className="font-mono text-white bg-white/5 px-1 py-0.5 rounded">.env</code> file, or set browser key below:
+              </p>
+              <a
+                href="https://aistudio.google.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-signal-purple hover:text-signal-purpleDeep font-medium transition-colors whitespace-nowrap self-start sm:self-auto"
+              >
+                Get API Key <ExternalLink size={11} />
+              </a>
+            </div>
             <div className="flex gap-2">
               <input
                 type="password"
@@ -200,10 +210,20 @@ export default function CreateContent({
 
       {/* Warning banner if API key is missing */}
       {!hasApiKey && (
-        <div className="mb-6 rounded-2xl border border-signal-orange/30 bg-signal-orange/10 p-5 animate-rise flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-orange-300">
-            <AlertTriangle size={18} />
-            <h3 className="font-display text-sm font-semibold">Gemini API Key Required</h3>
+        <div className="mb-6 rounded-2xl border border-signal-orange/30 bg-signal-orange/10 p-5 animate-rise flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-orange-300">
+              <AlertTriangle size={18} />
+              <h3 className="font-display text-sm font-semibold">Gemini API Key Required</h3>
+            </div>
+            <a
+              href="https://aistudio.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500/10 border border-orange-500/30 px-3.5 py-1.5 text-xs font-semibold text-orange-300 transition-all hover:bg-orange-500/20 hover:border-orange-500/50 self-start sm:self-auto"
+            >
+              Get Free Key <ExternalLink size={12} />
+            </a>
           </div>
           <p className="text-xs text-mist-300 leading-relaxed">
             Please enter your API Key below to activate AI content generation. The key will be stored securely in your browser's local storage.
