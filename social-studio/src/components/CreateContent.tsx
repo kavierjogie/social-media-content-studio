@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Sparkles, Copy, Check, ChevronDown, Repeat, BookOpen, AlertTriangle } from 'lucide-react'
 import Card from './ui/Card'
 import Button from './ui/Button'
@@ -40,6 +40,21 @@ export default function CreateContent({
   const [result, setResult] = useState<ContentItem | null>(null)
   const [activeTab, setActiveTab] = useState<Platform | null>(null)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // API Key State
   const envKeyExists = !!(import.meta.env.VITE_GEMINI_API_KEY && import.meta.env.VITE_GEMINI_API_KEY.trim())
@@ -398,7 +413,55 @@ export default function CreateContent({
             </Button>
           </div>
 
-          <div className="flex flex-wrap gap-2 border-b border-white/8 pb-3">
+          {/* Mobile dropdown selector */}
+          <div className="relative sm:hidden mb-6" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className={`w-full flex items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all shadow-sm ${
+                activeTab ? `platform-active-${activeTab}` : 'border-white/10 bg-white/[0.03] text-mist-400'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {activeTab && <PlatformIcon platform={activeTab} size={15} />}
+                <span className="font-semibold">
+                  {activeTab ? (PLATFORMS.find((p) => p.id === activeTab)?.label || activeTab) : 'Select Platform'}
+                </span>
+              </div>
+              <ChevronDown size={16} className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute left-0 right-0 z-30 mt-2 rounded-xl border border-white/10 bg-ink-950 p-1.5 shadow-xl animate-rise">
+                {result.pieces.map((piece) => {
+                  const isSelected = activeTab === piece.platform;
+                  return (
+                    <button
+                      key={piece.platform}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(piece.platform)
+                        setDropdownOpen(false)
+                      }}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
+                        isSelected
+                          ? `platform-active-${piece.platform}`
+                          : 'text-mist-400 hover:text-mist-100 hover:bg-white/5'
+                      }`}
+                    >
+                      <PlatformIcon platform={piece.platform} size={14} />
+                      <span>
+                        {PLATFORMS.find((p) => p.id === piece.platform)?.label || piece.platform}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop tabs selector */}
+          <div className="hidden sm:flex flex-wrap gap-2 border-b border-white/8 pb-3">
             {result.pieces.map((piece) => (
               <button
                 key={piece.platform}
