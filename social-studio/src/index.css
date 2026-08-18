@@ -60,3 +60,72 @@ body {
   background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
   border: 1px solid rgba(255,255,255,0.08);
 }
+
+/* Active platform buttons & selectors */
+.platform-active-linkedin {
+  border-color: rgba(10, 102, 194, 0.5) !important;
+  background-color: rgba(10, 102, 194, 0.12) !important;
+  color: #93C5FD !important;
+}
+.platform-active-instagram {
+  border-color: rgba(225, 48, 108, 0.6) !important;
+  background: linear-gradient(45deg, rgba(240, 148, 51, 0.12), rgba(220, 39, 67, 0.12), rgba(188, 24, 136, 0.12)) !important;
+  color: #F472B6 !important;
+}
+.platform-active-tiktok {
+  border-color: rgba(37, 244, 238, 0.5) !important;
+  background: linear-gradient(135deg, rgba(37, 244, 238, 0.12) 0%, rgba(254, 44, 85, 0.12) 100%) !important;
+  color: #25F4EE !important;
+}
+.platform-active-x {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #FFFFFF !important;
+}
+.platform-active-blog {
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  background-color: rgba(139, 92, 246, 0.12) !important;
+  color: #C4B5FD !important;
+}
+.platform-active-promo {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #6EE7B7 !important;
+}
+.platform-active-hashtags {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  color: #FCD34D !important;
+}
+.platform-active-calendar {
+  border-color: rgba(249, 115, 22, 0.5) !important;
+  background-color: rgba(249, 115, 22, 0.12) !important;
+  color: #FDBA74 !important;
+}
+
+/* Icon brand colors */
+.platform-icon-linkedin {
+  color: #0A66C2;
+}
+.platform-icon-instagram {
+  color: #E1306C;
+}
+.platform-icon-tiktok {
+  color: #25F4EE;
+}
+.platform-icon-x {
+  color: #FFFFFF;
+}
+.platform-icon-blog {
+  color: #8B5CF6;
+}
+.platform-icon-promo {
+  color: #10B981;
+}
+.platform-icon-hashtags {
+  color: #F59E0B;
+}
+.platform-icon-calendar {
+  color: #F97316;
+}
+

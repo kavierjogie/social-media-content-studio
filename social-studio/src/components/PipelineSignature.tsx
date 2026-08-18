@@ -1,10 +1,10 @@
 import { Linkedin, Instagram, Music2, AtSign, Newspaper } from 'lucide-react'
 
 const targets = [
-  { Icon: Linkedin, y: 40, color: '#8B5CF6' },
-  { Icon: Instagram, y: 100, color: '#EC4899' },
-  { Icon: Music2, y: 160, color: '#EC4899' },
-  { Icon: AtSign, y: 220, color: '#F97316' }
+  { Icon: Linkedin, y: 40, color: '#0A66C2' },
+  { Icon: Instagram, y: 100, color: '#E1306C' },
+  { Icon: Music2, y: 160, color: '#25F4EE' },
+  { Icon: AtSign, y: 220, color: '#FFFFFF' }
 ]
 
 export default function PipelineSignature() {

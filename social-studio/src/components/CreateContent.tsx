@@ -296,7 +296,7 @@ export default function CreateContent({
                   onClick={() => togglePlatform(p.id)}
                   className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition-colors ${
                     active
-                      ? 'border-signal-pink/40 bg-signal-pink/15 text-pink-200'
+                      ? `platform-active-${p.id}`
                       : 'border-white/10 bg-white/[0.03] text-mist-400 hover:text-mist-100'
                   }`}
                 >
@@ -403,7 +403,7 @@ export default function CreateContent({
                 onClick={() => setActiveTab(piece.platform)}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                   activeTab === piece.platform
-                    ? 'bg-white/10 text-mist-50'
+                    ? `platform-active-${piece.platform}`
                     : 'text-mist-400 hover:text-mist-100'
                 }`}
               >

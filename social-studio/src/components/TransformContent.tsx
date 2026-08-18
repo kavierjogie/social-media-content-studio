@@ -132,7 +132,7 @@ export default function TransformContent({
                         disabled={transforming}
                         className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                           active
-                            ? 'border-signal-orange/40 bg-signal-orange/15 text-orange-200'
+                            ? `platform-active-${p.id}`
                             : 'border-white/10 bg-white/[0.03] text-mist-400 hover:text-mist-100'
                         }`}
                       >
