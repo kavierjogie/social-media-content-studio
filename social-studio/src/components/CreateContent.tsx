@@ -8,6 +8,7 @@ import { PROMPTS } from '../data/prompts'
 import { Platform, ContentItem, PromptTemplate } from '../types'
 import { transformContent } from '../lib/generator'
 import { uid } from '../lib/storage'
+import RefinePiece from './RefinePiece'
 
 const TONES = [
   { id: 'default', label: 'Natural' },
@@ -18,11 +19,13 @@ const TONES = [
 
 export default function CreateContent({
   onSave,
+  onUpdate,
   prefillPrompt,
   onClearPrompt,
   goToTransform
 }: {
   onSave: (item: ContentItem) => void
+  onUpdate?: (item: ContentItem) => void
   prefillPrompt?: PromptTemplate
   onClearPrompt?: () => void
   goToTransform: (item: ContentItem) => void
@@ -429,6 +432,21 @@ export default function CreateContent({
                 <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-mist-100">
                   {piece.content}
                 </pre>
+                <RefinePiece
+                  topic={result.topic}
+                  platform={piece.platform}
+                  tone={result.tone}
+                  content={piece.content}
+                  existingPieces={result.pieces}
+                  onSuccess={(newContent) => {
+                    const updatedPieces = result.pieces.map((p) =>
+                      p.platform === piece.platform ? { ...p, content: newContent } : p
+                    )
+                    const updatedItem = { ...result, pieces: updatedPieces }
+                    setResult(updatedItem)
+                    if (onUpdate) onUpdate(updatedItem)
+                  }}
+                />
               </Card>
             ))}
         </div>

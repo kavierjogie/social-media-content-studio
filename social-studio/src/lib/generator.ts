@@ -149,3 +149,44 @@ export async function transformContent(
   })
   return Promise.all(promises)
 }
+
+export async function regenerateForPlatform(
+  topic: string,
+  platform: Platform,
+  tone: string,
+  currentContent: string,
+  instruction: string,
+  existingPieces?: GeneratedPiece[]
+): Promise<string> {
+  const otherContext = existingPieces && existingPieces.length > 0
+    ? `Here is the other content generated for this idea (for context consistency):\n` +
+      existingPieces.filter(p => p.platform !== platform).map(p => `[${p.platform.toUpperCase()}]:\n${p.content}`).join('\n\n')
+    : ''
+
+  const promptText = `
+You are an expert social media marketer and content strategist.
+We have an idea/topic: "${topic}" (Tone: "${tone}").
+
+We already generated a draft for the ${platform.toUpperCase()} platform, but the user wants to refine/rewrite it.
+
+Current draft for ${platform.toUpperCase()}:
+"""
+${currentContent}
+"""
+
+The user's refinement instruction is: "${instruction}"
+
+${otherContext ? `Other platforms' content for context:\n\n${otherContext}\n\n` : ''}
+
+Please rewrite the ${platform.toUpperCase()} post according to the user's instruction.
+Keep the rewrite consistent with the target platform guidelines.
+
+Format Guidelines for ${platform}:
+${PLATFORM_INSTRUCTIONS[platform]}
+
+Do not add intro/outro comments or formatting metadata wrapper. Return ONLY the final revised output content for ${platform}.
+`
+
+  return callGemini(promptText)
+}
+

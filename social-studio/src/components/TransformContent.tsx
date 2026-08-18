@@ -6,6 +6,7 @@ import PlatformIcon from './PlatformIcon'
 import { PLATFORMS } from '../data/platforms'
 import { ContentItem, Platform } from '../types'
 import { transformContent } from '../lib/generator'
+import RefinePiece from './RefinePiece'
 
 export default function TransformContent({
   items,
@@ -198,6 +199,20 @@ export default function TransformContent({
                 </button>
               </div>
               <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-mist-100">{piece.content}</pre>
+              <RefinePiece
+                topic={current.topic}
+                platform={piece.platform}
+                tone={current.tone}
+                content={piece.content}
+                existingPieces={current.pieces}
+                onSuccess={(newContent) => {
+                  const updatedPieces = current.pieces.map((p) =>
+                    p.platform === piece.platform ? { ...p, content: newContent } : p
+                  )
+                  const updatedItem = { ...current, pieces: updatedPieces }
+                  onUpdate(updatedItem)
+                }}
+              />
             </Card>
           ))}
         </div>

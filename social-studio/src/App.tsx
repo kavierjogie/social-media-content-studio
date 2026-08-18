@@ -72,6 +72,7 @@ export default function App() {
           {view === 'create' && (
             <CreateContent
               onSave={handleSave}
+              onUpdate={handleUpdate}
               prefillPrompt={prefillPrompt || undefined}
               onClearPrompt={() => setPrefillPrompt(null)}
               goToTransform={goToTransform}
