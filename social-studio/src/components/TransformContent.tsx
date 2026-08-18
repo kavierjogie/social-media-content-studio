@@ -7,6 +7,8 @@ import { PLATFORMS } from '../data/platforms'
 import { ContentItem, Platform } from '../types'
 import { transformContent } from '../lib/generator'
 import RefinePiece from './RefinePiece'
+import EditablePostCard from './EditablePostCard'
+
 
 export default function TransformContent({
   items,
@@ -184,36 +186,22 @@ export default function TransformContent({
       {current && (
         <div className="mt-8 space-y-4">
           {current.pieces.map((piece) => (
-            <Card key={piece.platform}>
-              <div className="mb-3 flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm font-medium text-mist-100">
-                  <PlatformIcon platform={piece.platform} size={14} />
-                  {PLATFORMS.find((p) => p.id === piece.platform)?.label}
-                </span>
-                <button
-                  onClick={() => copy(piece.platform, piece.content)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-mist-300 hover:text-mist-50"
-                >
-                  {copiedKey === piece.platform ? <Check size={13} className="text-signal-orange" /> : <Copy size={13} />}
-                  {copiedKey === piece.platform ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-mist-100">{piece.content}</pre>
-              <RefinePiece
-                topic={current.topic}
-                platform={piece.platform}
-                tone={current.tone}
-                content={piece.content}
-                existingPieces={current.pieces}
-                onSuccess={(newContent) => {
-                  const updatedPieces = current.pieces.map((p) =>
-                    p.platform === piece.platform ? { ...p, content: newContent } : p
-                  )
-                  const updatedItem = { ...current, pieces: updatedPieces }
-                  onUpdate(updatedItem)
-                }}
-              />
-            </Card>
+            <EditablePostCard
+              key={piece.platform}
+              topic={current.topic}
+              platform={piece.platform}
+              tone={current.tone}
+              content={piece.content}
+              existingPieces={current.pieces}
+              showHeaderLabel={true}
+              onUpdate={(newContent) => {
+                const updatedPieces = current.pieces.map((p) =>
+                  p.platform === piece.platform ? { ...p, content: newContent } : p
+                )
+                const updatedItem = { ...current, pieces: updatedPieces }
+                onUpdate(updatedItem)
+              }}
+            />
           ))}
         </div>
       )}
