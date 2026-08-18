@@ -83,7 +83,7 @@ export default function App() {
           )}
           {view === 'library' && <PromptLibrary onUse={usePrompt} />}
           {view === 'recent' && (
-            <RecentContent items={items} onDelete={handleDelete} onTransform={goToTransform} />
+            <RecentContent items={items} onDelete={handleDelete} onTransform={goToTransform} onUpdate={handleUpdate} />
           )}
           {view === 'calendar' && <ContentCalendar items={items} onSchedule={handleSchedule} />}
         </main>

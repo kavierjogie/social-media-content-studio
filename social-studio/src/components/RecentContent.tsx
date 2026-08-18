@@ -4,15 +4,18 @@ import Card from './ui/Card'
 import PlatformIcon from './PlatformIcon'
 import { PLATFORMS } from '../data/platforms'
 import { ContentItem } from '../types'
+import RecentPostEditor from './RecentPostEditor'
 
 export default function RecentContent({
   items,
   onDelete,
-  onTransform
+  onTransform,
+  onUpdate
 }: {
   items: ContentItem[]
   onDelete: (id: string) => void
   onTransform: (item: ContentItem) => void
+  onUpdate: (item: ContentItem) => void
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -67,13 +70,18 @@ export default function RecentContent({
                     <div className="animate-rise border-t border-white/8 px-5 py-4">
                       <div className="space-y-4">
                         {item.pieces.map((p) => (
-                          <div key={p.platform}>
-                            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-mist-300">
-                              <PlatformIcon platform={p.platform} size={12} />
-                              {PLATFORMS.find((pl) => pl.id === p.platform)?.label}
-                            </p>
-                            <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-mist-100">{p.content}</pre>
-                          </div>
+                          <RecentPostEditor
+                            key={p.platform}
+                            platform={p.platform}
+                            content={p.content}
+                            onUpdate={(newContent) => {
+                              const updatedPieces = item.pieces.map((piece) =>
+                                piece.platform === p.platform ? { ...piece, content: newContent } : piece
+                              )
+                              const updatedItem = { ...item, pieces: updatedPieces }
+                              onUpdate(updatedItem)
+                            }}
+                          />
                         ))}
                       </div>
                       <div className="mt-4 flex items-center gap-3 border-t border-white/8 pt-4">
