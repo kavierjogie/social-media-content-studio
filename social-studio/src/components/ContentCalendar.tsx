@@ -1,21 +1,25 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, ChevronDown, X } from 'lucide-react'
 import Card from './ui/Card'
 import Button from './ui/Button'
 import PlatformIcon from './PlatformIcon'
+import RecentPostEditor from './RecentPostEditor'
 import { ContentItem } from '../types'
 
 export default function ContentCalendar({
   items,
-  onSchedule
+  onSchedule,
+  onUpdate
 }: {
   items: ContentItem[]
   onSchedule: (id: string, date: string) => void
+  onUpdate?: (item: ContentItem) => void
 }) {
   const [pendingId, setPendingId] = useState<string>('')
   const [pendingDate, setPendingDate] = useState<string>('')
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const grouped = useMemo(() => {
@@ -149,18 +153,73 @@ export default function ContentCalendar({
                     {new Date(date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
                   </p>
                   <div className="space-y-2">
-                    {entries.map((i) => (
-                      <Card key={i.id} className="flex items-center justify-between">
-                        <span className="text-sm text-mist-100">{i.topic}</span>
-                        <div className="flex gap-1">
-                          {i.pieces.map((p) => (
-                            <span key={p.platform} className="rounded-md bg-white/5 p-1.5 text-mist-300">
-                              <PlatformIcon platform={p.platform} size={12} />
-                            </span>
-                          ))}
-                        </div>
-                      </Card>
-                    ))}
+                    {entries.map((i) => {
+                      const isExpanded = expandedItemId === i.id
+                      return (
+                        <Card key={i.id} className="!p-0 overflow-hidden border border-white/8 bg-white/[0.02] backdrop-blur-md">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedItemId(isExpanded ? null : i.id)}
+                            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-white/[0.01] transition-colors duration-150"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate font-display text-sm font-medium text-mist-50">{i.topic}</p>
+                              <p className="mt-1 text-xs text-mist-400">
+                                {i.pieces.length} format{i.pieces.length === 1 ? '' : 's'}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-3">
+                              <div className="hidden gap-1 sm:flex">
+                                {i.pieces.map((p) => (
+                                  <span key={p.platform} className="rounded-md bg-white/5 p-1.5 text-mist-300">
+                                    <PlatformIcon platform={p.platform} size={12} />
+                                  </span>
+                                ))}
+                              </div>
+                              <ChevronDown
+                                size={16}
+                                className={`text-mist-400 transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </div>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="animate-rise border-t border-white/8 px-5 py-4 bg-white/[0.005]">
+                              <div className="space-y-4">
+                                {i.pieces.map((p) => (
+                                  <RecentPostEditor
+                                    key={p.platform}
+                                    platform={p.platform}
+                                    content={p.content}
+                                    onUpdate={(newContent) => {
+                                      if (onUpdate) {
+                                        const updatedPieces = i.pieces.map((piece) =>
+                                          piece.platform === p.platform ? { ...piece, content: newContent } : piece
+                                        )
+                                        const updatedItem = { ...i, pieces: updatedPieces }
+                                        onUpdate(updatedItem)
+                                      }
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="mt-4 flex items-center justify-end border-t border-white/8 pt-4">
+                                <button
+                                  type="button"
+                                  onClick={() => onSchedule(i.id, '')}
+                                  className="flex items-center gap-1.5 text-xs font-medium text-red-400 hover:text-red-300 transition-colors"
+                                >
+                                  <X size={13} />
+                                  Unschedule
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </Card>
+                      )
+                    })}
                   </div>
                 </div>
               ))}

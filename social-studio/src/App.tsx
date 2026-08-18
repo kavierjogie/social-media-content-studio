@@ -85,7 +85,9 @@ export default function App() {
           {view === 'recent' && (
             <RecentContent items={items} onDelete={handleDelete} onTransform={goToTransform} onUpdate={handleUpdate} />
           )}
-          {view === 'calendar' && <ContentCalendar items={items} onSchedule={handleSchedule} />}
+          {view === 'calendar' && (
+            <ContentCalendar items={items} onSchedule={handleSchedule} onUpdate={handleUpdate} />
+          )}
         </main>
       </div>
     </div>
