@@ -123,6 +123,11 @@ export class GroqProvider implements AIProvider {
         } catch {
           // ignore parsing error
         }
+
+        if (response.status === 401) {
+          console.error('[Groq API Key Config Issue] The Models API returned 401 Unauthorized. Please check your GROQ_API_KEY / environment variable configuration.')
+        }
+
         console.warn(
           `[Groq Models Fetch Error] HTTP Status: ${response.status}, Response:`, 
           responseBody || 'No response body',
@@ -135,6 +140,13 @@ export class GroqProvider implements AIProvider {
       const availableModels: string[] = data.data?.map((m: any) => m.id) || []
       console.log('Available Groq models:', availableModels)
       
+      // 9. For the first test, use llama-3.1-8b-instant if it appears in the available model list.
+      if (availableModels.includes('llama-3.1-8b-instant')) {
+        this.selectedModel = 'llama-3.1-8b-instant'
+        console.log(`Dynamically selected preferred model: llama-3.1-8b-instant`)
+        return 'llama-3.1-8b-instant'
+      }
+
       const PREFERRED_GROQ_MODELS = [
         'openai/gpt-oss-20b',
         'openai/gpt-oss-120b',
@@ -259,6 +271,50 @@ export class GroqProvider implements AIProvider {
   }
 }
 
+// 10. Make a completely independent Groq test request before using the fallback system.
+export async function testGroqStandalone(apiKey: string | null, model: string): Promise<string> {
+  const url = '/api/groq/chat/completions'
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        {
+          role: 'user',
+          content: 'Reply with exactly: Groq is working.'
+        }
+      ]
+    })
+  })
+
+  if (!response.ok) {
+    const status = response.status
+    let responseBody = ''
+    try {
+      responseBody = await response.text()
+    } catch {
+      // ignore
+    }
+    console.error(`[Groq Standalone Test Failed] HTTP Status: ${status}, Response Body:`, responseBody || 'No response body')
+    throw new Error(`Groq standalone test failed: Status ${status}. Response: ${responseBody || 'No body'}`)
+  }
+
+  const data = await response.json()
+  const text = data.choices?.[0]?.message?.content
+  if (!text) {
+    throw new Error('Groq standalone test failed: No text returned in choices.')
+  }
+  return text.trim()
+}
+
 // Registry of available AI Providers (primary first, then fallback)
 export const providers: AIProvider[] = [
   new GeminiProvider(),
@@ -281,54 +337,50 @@ export async function callAI(prompt: string): Promise<string> {
     )
   }
 
-  // Helper to check if an error is a quota/rate limit error
-  const isQuotaError = (err: any): boolean => {
-    if (err?.status === 429) return true
-    const msg = (err?.message || err?.toString() || '').toLowerCase()
-    return (
-      msg.includes('429') ||
-      msg.includes('quota') ||
-      msg.includes('rate limit') ||
-      msg.includes('rate_limit') ||
-      msg.includes('limit exceeded') ||
-      msg.includes('resource_exhausted') ||
-      msg.includes('resource exhausted')
-    )
-  }
-
   if (geminiConfigured && gemini) {
     try {
       console.log(`Attempting AI generation with primary provider: ${gemini.name}`)
       const result = await gemini.generate(prompt)
       return result
-    } catch (err: any) {
-      const errMsg = err.message || err.toString()
-      console.warn(`${gemini.name} generation failed. Error: ${errMsg}`)
+    } catch (geminiErr: any) {
+      const geminiErrMsg = geminiErr.message || geminiErr.toString()
+      console.warn(`${gemini.name} generation failed (unavailable/quota exceeded). Error: ${geminiErrMsg}`)
 
-      // If Gemini fails with a quota/rate-limit error, fall back to Groq (if configured)
-      if (isQuotaError(err)) {
-        if (groqConfigured && groq) {
-          console.log(`Gemini rate limited/quota exceeded. Falling back to Groq...`)
-          try {
-            const result = await groq.generate(prompt)
-            return result
-          } catch (groqErr: any) {
-            const groqErrMsg = groqErr.message || groqErr.toString()
-            console.error(`Groq generation failed during fallback. Error: ${groqErrMsg}`)
-            throw new Error(`Gemini failed (quota exceeded): ${errMsg}\nFallback Groq also failed: ${groqErrMsg}`)
-          }
-        } else {
-          throw new Error(`Gemini failed (quota exceeded): ${errMsg}\nGroq is not configured as a fallback.`)
+      // Fall back to Groq for any Gemini failures (quota exceeded or unavailable)
+      if (groqConfigured && groq) {
+        console.log(`Falling back to Groq...`)
+        try {
+          const apiKey = (groq as GroqProvider).getApiKey()
+          const modelToUse = await (groq as GroqProvider).selectBestModel(apiKey)
+          
+          console.log(`[Groq Standalone Test] Running test request...`)
+          const testText = await testGroqStandalone(apiKey, modelToUse)
+          console.log(`[Groq Standalone Test] Test succeeded! Response: "${testText}"`)
+
+          // 15. If the standalone Groq test succeeds, connect that exact working implementation to the Gemini fallback.
+          const result = await groq.generate(prompt)
+          return result
+        } catch (groqErr: any) {
+          const groqErrMsg = groqErr.message || groqErr.toString()
+          console.error(`Groq generation failed during fallback. Error: ${groqErrMsg}`)
+          throw new Error(`Gemini failed: ${geminiErrMsg}\nFallback Groq also failed: ${groqErrMsg}`)
         }
       } else {
-        // For non-quota/rate-limit errors, do not fall back to Groq. Expose the Gemini error immediately.
-        throw err
+        throw new Error(`Gemini failed: ${geminiErrMsg}\nGroq is not configured as a fallback.`)
       }
     }
   } else if (groqConfigured && groq) {
     // If Gemini is not configured, fall back to Groq directly
     try {
       console.log(`Gemini is not configured. Attempting AI generation with Groq...`)
+      
+      const apiKey = (groq as GroqProvider).getApiKey()
+      const modelToUse = await (groq as GroqProvider).selectBestModel(apiKey)
+      
+      console.log(`[Groq Standalone Test] Running test request...`)
+      const testText = await testGroqStandalone(apiKey, modelToUse)
+      console.log(`[Groq Standalone Test] Test succeeded! Response: "${testText}"`)
+
       const result = await groq.generate(prompt)
       return result
     } catch (err: any) {
