@@ -80,36 +80,42 @@ export class GroqProvider implements AIProvider {
   private selectedModel: string | null = null
 
   getApiKey(): string | null {
-    const envKey = import.meta.env.VITE_GROQ_API_KEY
-    if (envKey && envKey.trim()) return envKey.trim()
-
+    // Check local storage first
     const localKey = localStorage.getItem('studio.groq_api_key')
     if (localKey && localKey.trim()) return localKey.trim()
+
+    // Fallback to client-side env key if defined
+    const envKey = import.meta.env.VITE_GROQ_API_KEY
+    if (envKey && envKey.trim()) return envKey.trim()
 
     return null
   }
 
   isConfigured(): boolean {
-    return !!this.getApiKey()
+    return !!this.getApiKey() || import.meta.env.VITE_GROQ_KEY_CONFIGURED === 'true'
   }
 
-  async selectBestModel(apiKey: string): Promise<string> {
+  async selectBestModel(apiKey: string | null): Promise<string> {
     if (this.selectedModel) {
       return this.selectedModel
     }
 
     const defaultModel = 'llama-3.3-70b-versatile'
     try {
-      console.log('Fetching available models from Groq API...')
-      const response = await fetch('https://api.groq.com/openai/v1/models', {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        }
+      console.log('Fetching available models from Groq API (via proxy)...')
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`
+      }
+
+      const response = await fetch('/api/groq/models', {
+        headers
       })
 
       if (!response.ok) {
-        console.warn(`Groq models endpoint returned status ${response.status}. Using default model: ${defaultModel}`)
+        console.warn(`Groq models proxy endpoint returned status ${response.status}. Using default model: ${defaultModel}`)
         return defaultModel
       }
 
@@ -118,6 +124,7 @@ export class GroqProvider implements AIProvider {
       console.log('Available Groq models:', availableModels)
       
       const PREFERRED_GROQ_MODELS = [
+        'openai/gpt-oss-120b',
         'llama-3.3-70b-versatile',
         'llama-3.3-70b-specdec',
         'deepseek-r1-distill-llama-70b',
@@ -138,17 +145,36 @@ export class GroqProvider implements AIProvider {
         }
       }
 
-      // If none of our preferred models are found, find any text-generation model
-      const textModel = availableModels.find(id => 
-        !id.includes('whisper') && 
-        !id.includes('guard') && 
-        !id.includes('vision')
-      )
+      // If none of our preferred models are found, find any text-generation model.
+      // Exclude audio, speech-to-text, text-to-speech, or Arabic-specific models.
+      const textModels = availableModels.filter(id => {
+        const idLower = id.toLowerCase()
+        return (
+          !idLower.includes('whisper') && 
+          !idLower.includes('guard') && 
+          !idLower.includes('vision') &&
+          !idLower.includes('orpheus') &&
+          !idLower.includes('arabic') &&
+          !idLower.includes('saudi') &&
+          !idLower.includes('tts') &&
+          !idLower.includes('stt') &&
+          !idLower.includes('canopylabs')
+        )
+      })
 
-      if (textModel) {
-        this.selectedModel = textModel
-        console.log(`No preferred model matched. Dynamically selected Groq text model: ${textModel}`)
-        return textModel
+      if (textModels.length > 0) {
+        const fallback = textModels.find(id => {
+          const idLower = id.toLowerCase()
+          return idLower.includes('llama') ||
+                 idLower.includes('gemma') ||
+                 idLower.includes('mixtral') ||
+                 idLower.includes('deepseek') ||
+                 idLower.includes('gpt')
+        }) || textModels[0]
+
+        this.selectedModel = fallback
+        console.log(`No preferred model matched. Dynamically selected Groq text model: ${fallback}`)
+        return fallback
       }
 
       // Final fallback if list is empty or unrecognized
@@ -163,20 +189,24 @@ export class GroqProvider implements AIProvider {
   }
 
   async generate(prompt: string): Promise<string> {
-    const apiKey = this.getApiKey()
-    if (!apiKey) {
+    if (!this.isConfigured()) {
       throw new Error('API key is missing.')
     }
 
+    const apiKey = this.getApiKey()
     const modelToUse = await this.selectBestModel(apiKey)
-    const url = 'https://api.groq.com/openai/v1/chat/completions'
+    const url = '/api/groq/chat/completions'
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`
+    }
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers,
       body: JSON.stringify({
         model: modelToUse,
         messages: [

@@ -68,7 +68,7 @@ export default function CreateContent({
   const [localGeminiKey, setLocalGeminiKey] = useState(() => localStorage.getItem('studio.gemini_api_key') || '')
   const hasGeminiKey = envGeminiKeyExists || !!localGeminiKey.trim()
 
-  const envGroqKeyExists = !!(import.meta.env.VITE_GROQ_API_KEY && import.meta.env.VITE_GROQ_API_KEY.trim())
+  const envGroqKeyExists = !!(import.meta.env.VITE_GROQ_API_KEY && import.meta.env.VITE_GROQ_API_KEY.trim()) || import.meta.env.VITE_GROQ_KEY_CONFIGURED === 'true'
   const [localGroqKey, setLocalGroqKey] = useState(() => localStorage.getItem('studio.groq_api_key') || '')
   const hasGroqKey = envGroqKeyExists || !!localGroqKey.trim()
 
@@ -286,7 +286,7 @@ export default function CreateContent({
                 )}
               </div>
               {envGroqKeyExists && (
-                <p className="text-[10px] text-emerald-400">✓ Detected VITE_GROQ_API_KEY in environment.</p>
+                <p className="text-[10px] text-emerald-400">✓ Detected GROQ_API_KEY in environment.</p>
               )}
             </div>
           </div>
