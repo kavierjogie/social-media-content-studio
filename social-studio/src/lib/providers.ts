@@ -102,7 +102,7 @@ export class GroqProvider implements AIProvider {
       return this.selectedModel
     }
 
-    const defaultModel = 'llama-3.1-8b-instant'
+    const defaultModel = 'openai/gpt-oss-20b'
     try {
       console.log('Fetching available models from Groq API (via proxy)...')
       const headers: Record<string, string> = {
@@ -136,13 +136,12 @@ export class GroqProvider implements AIProvider {
       console.log('Available Groq models:', availableModels)
       
       const PREFERRED_GROQ_MODELS = [
-        'llama-3.1-8b-instant',
         'openai/gpt-oss-20b',
         'openai/gpt-oss-120b',
-        'deepseek-r1-distill-llama-70b',
-        'deepseek-r1-distill-qwen-32b',
-        'gemma2-9b-it',
-        'mixtral-8x7b-32768'
+        'groq/compound',
+        'groq/compound-mini',
+        'qwen/qwen3.6-27b',
+        'allam-2-7b'
       ]
 
       for (const modelId of PREFERRED_GROQ_MODELS) {

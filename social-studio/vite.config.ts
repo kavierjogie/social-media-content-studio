@@ -7,9 +7,9 @@ const groqProxyPlugin = (groqApiKey: string) => ({
   configureServer(server: any) {
     server.middlewares.use((req: any, res: any, next: any) => {
       console.log(`[Proxy Middleware] Intercepted URL: ${req.url}`)
-      if (req.url && req.url.startsWith('/api/groq')) {
-        const urlObj = new URL(req.url, 'http://localhost')
-        const pathname = urlObj.pathname
+      const urlObj = new URL(req.url || '', 'http://localhost')
+      const pathname = urlObj.pathname
+      if (pathname.startsWith('/api/groq')) {
         const isModels = pathname === '/api/groq/models' || pathname === '/api/groq/models/'
         const isChat = pathname === '/api/groq/chat/completions' || pathname === '/api/groq/chat/completions/'
 
