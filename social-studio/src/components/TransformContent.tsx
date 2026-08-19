@@ -238,7 +238,7 @@ export default function TransformContent({
           <div className="relative flex flex-col items-center z-10">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-signal-pink/30 border-t-signal-pink"></div>
             <p className="mt-4 font-display text-base font-semibold text-mist-50 animate-pulse">Transforming your content...</p>
-            <p className="mt-1 text-xs text-mist-400">Gemini is rewriting the topic for new platforms</p>
+            <p className="mt-1 text-xs text-mist-400">AI is rewriting the topic for new platforms</p>
           </div>
         </div>
       )}

@@ -1,15 +1,5 @@
 import { GeneratedPiece, Platform } from '../types'
-
-// Retrieve the Gemini API key from Vite environment or localStorage
-function getApiKey(): string | null {
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY
-  if (envKey && envKey.trim()) return envKey.trim()
-
-  const localKey = localStorage.getItem('studio.gemini_api_key')
-  if (localKey && localKey.trim()) return localKey.trim()
-
-  return null
-}
+import { callAI } from './providers'
 
 const PLATFORM_INSTRUCTIONS: Record<Platform, string> = {
   blog: `Write a detailed, structured, long-form blog article. Format with Markdown. 
@@ -58,55 +48,6 @@ Make it punchy, trendy, and conversational.`,
 - Format this as a clean, readable Markdown layout (such as a table or a clear list).`
 }
 
-async function callGemini(prompt: string): Promise<string> {
-  const apiKey = getApiKey()
-  if (!apiKey) {
-    throw new Error('Gemini API key is missing. Please set VITE_GEMINI_API_KEY in your .env file or input it in the UI.')
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: prompt }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.7
-      }
-    })
-  })
-
-  if (!response.ok) {
-    let errorMsg = `API request failed with status ${response.status}`
-    try {
-      const errData = await response.json()
-      if (errData?.error?.message) {
-        errorMsg = errData.error.message
-      }
-    } catch {
-      // ignore json parsing errors
-    }
-    throw new Error(errorMsg)
-  }
-
-  const data = await response.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  
-  if (!text) {
-    throw new Error('No content returned from the Gemini API.')
-  }
-
-  return text.trim()
-}
 
 export async function generateForPlatform(
   topic: string,
@@ -131,7 +72,7 @@ ${PLATFORM_INSTRUCTIONS[platform]}
 Do not add intro/outro comments or formatting metadata wrapper. Return ONLY the final output content for ${platform}.
 `
 
-  return callGemini(promptText)
+  return callAI(promptText)
 }
 
 export async function transformContent(
@@ -187,6 +128,6 @@ ${PLATFORM_INSTRUCTIONS[platform]}
 Do not add intro/outro comments or formatting metadata wrapper. Return ONLY the final revised output content for ${platform}.
 `
 
-  return callGemini(promptText)
+  return callAI(promptText)
 }
 
