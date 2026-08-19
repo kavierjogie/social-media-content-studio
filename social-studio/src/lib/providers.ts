@@ -60,7 +60,9 @@ export class GeminiProvider implements AIProvider {
       } catch {
         // ignore json parsing errors
       }
-      throw new Error(errorMsg)
+      const error = new Error(errorMsg) as any
+      error.status = response.status
+      throw error
     }
 
     const data = await response.json()
@@ -100,7 +102,7 @@ export class GroqProvider implements AIProvider {
       return this.selectedModel
     }
 
-    const defaultModel = 'llama-3.3-70b-versatile'
+    const defaultModel = 'llama-3.1-8b-instant'
     try {
       console.log('Fetching available models from Groq API (via proxy)...')
       const headers: Record<string, string> = {
@@ -115,7 +117,17 @@ export class GroqProvider implements AIProvider {
       })
 
       if (!response.ok) {
-        console.warn(`Groq models proxy endpoint returned status ${response.status}. Using default model: ${defaultModel}`)
+        let responseBody = ''
+        try {
+          responseBody = await response.text()
+        } catch {
+          // ignore parsing error
+        }
+        console.warn(
+          `[Groq Models Fetch Error] HTTP Status: ${response.status}, Response:`, 
+          responseBody || 'No response body',
+          `Using default model: ${defaultModel}`
+        )
         return defaultModel
       }
 
@@ -124,17 +136,13 @@ export class GroqProvider implements AIProvider {
       console.log('Available Groq models:', availableModels)
       
       const PREFERRED_GROQ_MODELS = [
+        'llama-3.1-8b-instant',
+        'openai/gpt-oss-20b',
         'openai/gpt-oss-120b',
-        'llama-3.3-70b-versatile',
-        'llama-3.3-70b-specdec',
         'deepseek-r1-distill-llama-70b',
         'deepseek-r1-distill-qwen-32b',
-        'mixtral-8x7b-32768',
-        'llama-3.1-8b-instant',
-        'llama-3.1-70b-versatile',
         'gemma2-9b-it',
-        'llama-3.2-3b-preview',
-        'llama-3.2-11b-vision-preview'
+        'mixtral-8x7b-32768'
       ]
 
       for (const modelId of PREFERRED_GROQ_MODELS) {
@@ -158,7 +166,9 @@ export class GroqProvider implements AIProvider {
           !idLower.includes('saudi') &&
           !idLower.includes('tts') &&
           !idLower.includes('stt') &&
-          !idLower.includes('canopylabs')
+          !idLower.includes('canopylabs') &&
+          !idLower.includes('audio') &&
+          !idLower.includes('speech')
         )
       })
 
@@ -182,8 +192,8 @@ export class GroqProvider implements AIProvider {
       this.selectedModel = fallback
       console.log(`Using fallback Groq model: ${fallback}`)
       return fallback
-    } catch (err) {
-      console.warn('Failed to fetch Groq models list, falling back to default:', err)
+    } catch (err: any) {
+      console.warn('Failed to fetch Groq models list, falling back to default:', err.message || err)
       return defaultModel
     }
   }
@@ -220,16 +230,23 @@ export class GroqProvider implements AIProvider {
     })
 
     if (!response.ok) {
-      let errorMsg = `API request failed with status ${response.status}`
+      const status = response.status
+      let errorMsg = `API request failed with status ${status}`
+      let responseBody = ''
       try {
-        const errData = await response.json()
+        responseBody = await response.text()
+        const errData = JSON.parse(responseBody)
         if (errData?.error?.message) {
           errorMsg = errData.error.message
         }
       } catch {
         // ignore json parsing errors
       }
-      throw new Error(errorMsg)
+      
+      console.error(`[Groq Provider Error] HTTP Status: ${status}, Response:`, responseBody || errorMsg)
+      const error = new Error(errorMsg) as any
+      error.status = status
+      throw error
     }
 
     const data = await response.json()
@@ -250,12 +267,13 @@ export const providers: AIProvider[] = [
 ]
 
 export async function callAI(prompt: string): Promise<string> {
-  const errors: string[] = []
-  
-  // Find all configured providers
-  const activeProviders = providers.filter(p => p.isConfigured())
-  
-  if (activeProviders.length === 0) {
+  const gemini = providers.find(p => p.id === 'gemini')
+  const groq = providers.find(p => p.id === 'groq')
+
+  const geminiConfigured = gemini?.isConfigured()
+  const groqConfigured = groq?.isConfigured()
+
+  if (!geminiConfigured && !groqConfigured) {
     throw new Error(
       'AI generation failed: No AI providers are configured.\n' +
       '- Google Gemini: API key is not configured.\n' +
@@ -263,25 +281,65 @@ export async function callAI(prompt: string): Promise<string> {
       'Please enter your API keys in the settings or set them in the environment.'
     )
   }
-  
-  for (const provider of activeProviders) {
+
+  // Helper to check if an error is a quota/rate limit error
+  const isQuotaError = (err: any): boolean => {
+    if (err?.status === 429) return true
+    const msg = (err?.message || err?.toString() || '').toLowerCase()
+    return (
+      msg.includes('429') ||
+      msg.includes('quota') ||
+      msg.includes('rate limit') ||
+      msg.includes('rate_limit') ||
+      msg.includes('limit exceeded') ||
+      msg.includes('resource_exhausted') ||
+      msg.includes('resource exhausted')
+    )
+  }
+
+  if (geminiConfigured && gemini) {
     try {
-      console.log(`Attempting AI generation with provider: ${provider.name}`)
-      const result = await provider.generate(prompt)
+      console.log(`Attempting AI generation with primary provider: ${gemini.name}`)
+      const result = await gemini.generate(prompt)
       return result
     } catch (err: any) {
       const errMsg = err.message || err.toString()
-      console.warn(`${provider.name} generation failed. Error: ${errMsg}`)
-      errors.push(`${provider.name}: ${errMsg}`)
+      console.warn(`${gemini.name} generation failed. Error: ${errMsg}`)
+
+      // If Gemini fails with a quota/rate-limit error, fall back to Groq (if configured)
+      if (isQuotaError(err)) {
+        if (groqConfigured && groq) {
+          console.log(`Gemini rate limited/quota exceeded. Falling back to Groq...`)
+          try {
+            const result = await groq.generate(prompt)
+            return result
+          } catch (groqErr: any) {
+            const groqErrMsg = groqErr.message || groqErr.toString()
+            console.error(`Groq generation failed during fallback. Error: ${groqErrMsg}`)
+            throw new Error(`Gemini failed (quota exceeded): ${errMsg}\nFallback Groq also failed: ${groqErrMsg}`)
+          }
+        } else {
+          throw new Error(`Gemini failed (quota exceeded): ${errMsg}\nGroq is not configured as a fallback.`)
+        }
+      } else {
+        // For non-quota/rate-limit errors, do not fall back to Groq. Expose the Gemini error immediately.
+        throw err
+      }
+    }
+  } else if (groqConfigured && groq) {
+    // If Gemini is not configured, fall back to Groq directly
+    try {
+      console.log(`Gemini is not configured. Attempting AI generation with Groq...`)
+      const result = await groq.generate(prompt)
+      return result
+    } catch (err: any) {
+      const errMsg = err.message || err.toString()
+      console.error(`Groq generation failed. Error: ${errMsg}`)
+      throw err
     }
   }
-  
-  // If all failed, throw a combined error
-  throw new Error(
-    `AI generation failed for all configured providers:\n` +
-    errors.map((e) => `- ${e}`).join('\n') +
-    `\n\nPlease check your API keys in the settings or environment.`
-  )
+
+  throw new Error('No active AI providers available.')
 }
 
 // Expose test helper for testing providers in browser console

@@ -8,13 +8,15 @@ const groqProxyPlugin = (groqApiKey: string) => ({
     server.middlewares.use((req: any, res: any, next: any) => {
       console.log(`[Proxy Middleware] Intercepted URL: ${req.url}`)
       if (req.url && req.url.startsWith('/api/groq')) {
-        const isModels = req.url === '/api/groq/models'
-        const isChat = req.url === '/api/groq/chat/completions'
+        const urlObj = new URL(req.url, 'http://localhost')
+        const pathname = urlObj.pathname
+        const isModels = pathname === '/api/groq/models' || pathname === '/api/groq/models/'
+        const isChat = pathname === '/api/groq/chat/completions' || pathname === '/api/groq/chat/completions/'
 
         if (!isModels && !isChat) {
           res.statusCode = 404
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: { message: 'Proxy endpoint not found.' } }))
+          res.end(JSON.stringify({ error: { message: `Proxy endpoint not found: ${pathname}` } }))
           return
         }
 
@@ -83,7 +85,7 @@ const groqProxyPlugin = (groqApiKey: string) => ({
 export default defineConfig(({ mode }) => {
   // Load env variables regardless of the prefix
   const env = loadEnv(mode, process.cwd(), '')
-  const groqApiKey = (env.GROQ_API_KEY || env.VITE_GROQ_API_KEY || '').trim()
+  const groqApiKey = (process.env.GROQ_API_KEY || env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY || env.VITE_GROQ_API_KEY || '').trim()
 
   return {
     plugins: [
