@@ -104,7 +104,9 @@ export class GroqProvider implements AIProvider {
 
     const defaultModel = 'openai/gpt-oss-20b'
     try {
-      console.log('Fetching available models from Groq API (via proxy)...')
+      const hasKey = !!apiKey && apiKey.trim().length > 0
+      console.log(`GROQ_API_KEY detected: ${hasKey}`)
+      console.log('Fetching available models from Groq API...')
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       }
@@ -112,7 +114,8 @@ export class GroqProvider implements AIProvider {
         headers['Authorization'] = `Bearer ${apiKey}`
       }
 
-      const response = await fetch('/api/groq/models', {
+      const url = 'https://api.groq.com/openai/v1/models'
+      const response = await fetch(url, {
         headers
       })
 
@@ -128,9 +131,16 @@ export class GroqProvider implements AIProvider {
           console.error('[Groq API Key Config Issue] The Models API returned 401 Unauthorized. Please check your GROQ_API_KEY / environment variable configuration.')
         }
 
+        const urlObj = new URL(url)
         console.warn(
-          `[Groq Models Fetch Error] HTTP Status: ${response.status}, Response:`, 
-          responseBody || 'No response body',
+          `[Groq Models Fetch Error]`,
+          {
+            hostname: urlObj.hostname,
+            pathname: urlObj.pathname,
+            method: 'GET',
+            status: response.status,
+            responseBody: responseBody || 'No response body'
+          },
           `Using default model: ${defaultModel}`
         )
         return defaultModel
@@ -216,7 +226,7 @@ export class GroqProvider implements AIProvider {
 
     const apiKey = this.getApiKey()
     const modelToUse = await this.selectBestModel(apiKey)
-    const url = '/api/groq/chat/completions'
+    const url = 'https://api.groq.com/openai/v1/chat/completions'
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
@@ -254,7 +264,14 @@ export class GroqProvider implements AIProvider {
         // ignore json parsing errors
       }
       
-      console.error(`[Groq Provider Error] HTTP Status: ${status}, Response:`, responseBody || errorMsg)
+      const urlObj = new URL(url)
+      console.error(`[Groq Provider Error]`, {
+        hostname: urlObj.hostname,
+        pathname: urlObj.pathname,
+        method: 'POST',
+        status,
+        responseBody: responseBody || errorMsg
+      })
       const error = new Error(errorMsg) as any
       error.status = status
       throw error
@@ -273,7 +290,10 @@ export class GroqProvider implements AIProvider {
 
 // 10. Make a completely independent Groq test request before using the fallback system.
 export async function testGroqStandalone(apiKey: string | null, model: string): Promise<string> {
-  const url = '/api/groq/chat/completions'
+  const hasKey = !!apiKey && apiKey.trim().length > 0
+  console.log(`GROQ_API_KEY detected: ${hasKey}`)
+
+  const url = 'https://api.groq.com/openai/v1/chat/completions'
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   }
@@ -303,7 +323,14 @@ export async function testGroqStandalone(apiKey: string | null, model: string): 
     } catch {
       // ignore
     }
-    console.error(`[Groq Standalone Test Failed] HTTP Status: ${status}, Response Body:`, responseBody || 'No response body')
+    const urlObj = new URL(url)
+    console.error(`[Groq Standalone Test Failed]`, {
+      hostname: urlObj.hostname,
+      pathname: urlObj.pathname,
+      method: 'POST',
+      status,
+      responseBody: responseBody || 'No response body'
+    })
     throw new Error(`Groq standalone test failed: Status ${status}. Response: ${responseBody || 'No body'}`)
   }
 
