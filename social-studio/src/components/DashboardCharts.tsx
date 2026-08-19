@@ -13,7 +13,8 @@ const BRAND_COLORS: Record<Platform, { stroke: string; fill: string; text: strin
   x: { stroke: '#FFFFFF', fill: 'rgba(255, 255, 255, 0.15)', text: '#FFFFFF' },
   promo: { stroke: '#10B981', fill: 'rgba(16, 185, 129, 0.15)', text: '#6EE7B7' },
   hashtags: { stroke: '#F59E0B', fill: 'rgba(245, 158, 11, 0.15)', text: '#FCD34D' },
-  calendar: { stroke: '#F97316', fill: 'rgba(249, 115, 22, 0.15)', text: '#FDBA74' }
+  calendar: { stroke: '#F97316', fill: 'rgba(249, 115, 22, 0.15)', text: '#FDBA74' },
+  code: { stroke: '#06B6D4', fill: 'rgba(6, 182, 212, 0.15)', text: '#67E8F9' }
 }
 
 const DEFAULT_COLOR = { stroke: '#6B7280', fill: 'rgba(107, 114, 128, 0.15)', text: '#9CA3AF' }

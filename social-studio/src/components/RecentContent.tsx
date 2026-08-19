@@ -283,9 +283,22 @@ export default function RecentContent({
                                 key={p.platform}
                                 platform={p.platform}
                                 content={p.content}
+                                imageUrl={p.imageUrl}
+                                imagePrompt={p.imagePrompt}
+                                imageGenerating={p.imageGenerating}
+                                imageError={p.imageError}
+                                topic={item.topic}
+                                tone={item.tone}
                                 onUpdate={(newContent) => {
                                   const updatedPieces = item.pieces.map((piece) =>
                                     piece.platform === p.platform ? { ...piece, content: newContent } : piece
+                                  )
+                                  const updatedItem = { ...item, pieces: updatedPieces }
+                                  onUpdate(updatedItem)
+                                }}
+                                onUpdateImage={(newFields) => {
+                                  const updatedPieces = item.pieces.map((piece) =>
+                                    piece.platform === p.platform ? { ...piece, ...newFields } : piece
                                   )
                                   const updatedItem = { ...item, pieces: updatedPieces }
                                   onUpdate(updatedItem)

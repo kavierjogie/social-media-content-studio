@@ -51,6 +51,12 @@ export const PLATFORMS: PlatformMeta[] = [
     label: 'Content calendar',
     accent: 'orange',
     description: 'A structured weekly content plan with topics and formats.'
+  },
+  {
+    id: 'code',
+    label: 'Code snippet',
+    accent: 'purple',
+    description: 'A clean, value-packed code snippet with a brief explanation.'
   }
 ]
 

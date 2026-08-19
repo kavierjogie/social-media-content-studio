@@ -45,7 +45,20 @@ Make it punchy, trendy, and conversational.`,
   calendar: `Generate a structured weekly content calendar plan.
 - Map out a 7-day schedule (Day 1 to Day 7).
 - For each day, suggest: the recommended platform (e.g., LinkedIn, Instagram), the format (e.g., Carousel, Story, Short-form text), and a specific content angle/hook idea.
-- Format this as a clean, readable Markdown layout (such as a table or a clear list).`
+- Format this as a clean, readable Markdown layout (such as a table or a clear list).`,
+
+  code: `Generate a clean, value-packed code snippet (HTML, CSS, JS, Python, React, etc.) with a brief explanation matching the topic.
+- Format the response EXACTLY as:
+  [Brief explanation of the code snippet]
+  
+  \`\`\`[language]
+  [code snippet]
+  \`\`\`
+  
+  Key Benefits/Takeaways:
+  - [Benefit 1]
+  - [Benefit 2]
+- Make sure it contains exactly one code block inside markdown fence blocks.`
 }
 
 
@@ -82,10 +95,36 @@ export async function transformContent(
   existingPieces?: GeneratedPiece[]
 ): Promise<GeneratedPiece[]> {
   const promises = targets.map(async (platform) => {
-    const content = await generateForPlatform(topic, platform, tone, existingPieces)
+    // Start text generation
+    const textPromise = generateForPlatform(topic, platform, tone, existingPieces)
+    
+    // Start image generation in parallel if supported
+    let imagePromise: Promise<{ prompt: string; url: string }> | null = null
+    if (platformSupportsImage(platform)) {
+      imagePromise = (async () => {
+        const prompt = await generateImagePrompt(topic, tone)
+        const url = getImageUrl(prompt)
+        return { prompt, url }
+      })()
+    }
+
+    const content = await textPromise
+    let imageData: { prompt: string; url: string } | null = null
+
+    if (imagePromise) {
+      try {
+        imageData = await imagePromise
+      } catch (err) {
+        console.error('Failed to generate image prompt', err)
+      }
+    }
+
     return {
       platform,
-      content
+      content,
+      imageUrl: imageData?.url,
+      imagePrompt: imageData?.prompt,
+      imageGenerating: false
     }
   })
   return Promise.all(promises)
@@ -129,5 +168,37 @@ Do not add intro/outro comments or formatting metadata wrapper. Return ONLY the 
 `
 
   return callAI(promptText)
+}
+
+export function platformSupportsImage(platform: Platform): boolean {
+  return ['instagram', 'linkedin', 'blog', 'x', 'promo'].includes(platform)
+}
+
+export async function generateImagePrompt(topic: string, tone: string): Promise<string> {
+  const promptText = `
+You are a creative visual designer and prompt engineer.
+Create a highly detailed, descriptive, and vivid visual prompt for an image generator (like Stable Diffusion or Midjourney) based on the following topic and tone.
+Topic: "${topic}"
+Tone: "${tone}"
+
+The prompt should describe:
+- The subject or main focus of the image
+- The setting, atmosphere, and lighting
+- The style (e.g., professional photography, modern 3D render, minimalist vector illustration, etc.)
+- Color palette and mood
+
+Keep the output concise (1-2 sentences, max 60 words) but highly detailed. 
+Avoid generic terms like "photorealistic". 
+Return ONLY the prompt text, without any labels, quotes, intro, or explanation.
+`
+  const response = await callAI(promptText)
+  // Clean up any formatting output from the LLM
+  return response.replace(/^"|"$/g, '').replace(/^(Visual Prompt:|Prompt:)\s*/i, '').trim()
+}
+
+export function getImageUrl(prompt: string): string {
+  const cleanPrompt = encodeURIComponent(prompt.trim())
+  const seed = Math.floor(Math.random() * 1000000)
+  return `https://image.pollinations.ai/prompt/${cleanPrompt}?width=1024&height=1024&nologo=true&seed=${seed}`
 }
 

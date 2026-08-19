@@ -7,6 +7,7 @@ export type Platform =
   | 'hashtags'
   | 'promo'
   | 'calendar'
+  | 'code'
 
 export type PromptCategory =
   | 'Social Media'
@@ -28,6 +29,10 @@ export interface PromptTemplate {
 export interface GeneratedPiece {
   platform: Platform
   content: string
+  imageUrl?: string
+  imagePrompt?: string
+  imageGenerating?: boolean
+  imageError?: string
 }
 
 export interface ContentItem {

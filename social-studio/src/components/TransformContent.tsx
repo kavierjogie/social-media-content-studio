@@ -267,11 +267,22 @@ export default function TransformContent({
               platform={piece.platform}
               tone={current.tone}
               content={piece.content}
+              imageUrl={piece.imageUrl}
+              imagePrompt={piece.imagePrompt}
+              imageGenerating={piece.imageGenerating}
+              imageError={piece.imageError}
               existingPieces={current.pieces}
               showHeaderLabel={true}
               onUpdate={(newContent) => {
                 const updatedPieces = current.pieces.map((p) =>
                   p.platform === piece.platform ? { ...p, content: newContent } : p
+                )
+                const updatedItem = { ...current, pieces: updatedPieces }
+                onUpdate(updatedItem)
+              }}
+              onUpdateImage={(newFields) => {
+                const updatedPieces = current.pieces.map((p) =>
+                  p.platform === piece.platform ? { ...p, ...newFields } : p
                 )
                 const updatedItem = { ...current, pieces: updatedPieces }
                 onUpdate(updatedItem)

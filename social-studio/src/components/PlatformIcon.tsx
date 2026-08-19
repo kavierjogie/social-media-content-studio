@@ -1,4 +1,4 @@
-import { Newspaper, Linkedin, Instagram, Music2, AtSign, Megaphone, Hash, Calendar } from 'lucide-react'
+import { Newspaper, Linkedin, Instagram, Music2, AtSign, Megaphone, Hash, Calendar, Code2 } from 'lucide-react'
 import { Platform } from '../types'
 
 const ICONS: Record<Platform, typeof Newspaper> = {
@@ -9,7 +9,8 @@ const ICONS: Record<Platform, typeof Newspaper> = {
   x: AtSign,
   promo: Megaphone,
   hashtags: Hash,
-  calendar: Calendar
+  calendar: Calendar,
+  code: Code2
 }
 
 export default function PlatformIcon({ platform, size = 16, className = '' }: { platform: Platform; size?: number; className?: string }) {

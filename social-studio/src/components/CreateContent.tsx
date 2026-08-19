@@ -703,11 +703,23 @@ export default function CreateContent({
                 platform={piece.platform}
                 tone={result.tone}
                 content={piece.content}
+                imageUrl={piece.imageUrl}
+                imagePrompt={piece.imagePrompt}
+                imageGenerating={piece.imageGenerating}
+                imageError={piece.imageError}
                 existingPieces={result.pieces}
                 showHeaderLabel={false}
                 onUpdate={(newContent) => {
                   const updatedPieces = result.pieces.map((p) =>
                     p.platform === piece.platform ? { ...p, content: newContent } : p
+                  )
+                  const updatedItem = { ...result, pieces: updatedPieces }
+                  setResult(updatedItem)
+                  if (onUpdate) onUpdate(updatedItem)
+                }}
+                onUpdateImage={(newFields) => {
+                  const updatedPieces = result.pieces.map((p) =>
+                    p.platform === piece.platform ? { ...p, ...newFields } : p
                   )
                   const updatedItem = { ...result, pieces: updatedPieces }
                   setResult(updatedItem)
